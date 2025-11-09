@@ -41,15 +41,3 @@ class ResetPasswordForm(FlaskForm):
         "Confirm Password", validators=[DataRequired(), EqualTo("password")]
     )
     submit = SubmitField("Reset Password")
-
-
-class EmailVerificationForm(FlaskForm):
-    code = StringField(
-        "Verification Code",
-        validators=[
-            DataRequired(),
-            Length(min=6, max=6),
-            Regexp(r"^\d{6}$", message="Enter the 6-digit code from your email."),
-        ],
-    )
-    submit = SubmitField("Verify Email")
