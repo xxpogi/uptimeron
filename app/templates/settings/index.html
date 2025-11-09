@@ -1,0 +1,199 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Settings · PulseWatch{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 lg:px-8 space-y-14">
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div>
+            <h1 class="text-3xl font-semibold">Settings</h1>
+            <p class="mt-2 text-sm text-slate-400">Manage your profile, notifications, API keys, and public status pages.</p>
+        </div>
+    </header>
+
+    <section class="grid gap-6 lg:grid-cols-2">
+        <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-6">
+            <h2 class="text-lg font-semibold">Profile</h2>
+            <p class="text-sm text-slate-400 mt-1">Keep your account details up-to-date.</p>
+            <form method="post" class="mt-6 space-y-4">
+                {{ profile_form.csrf_token }}
+                <div>
+                    <label for="profile-name" class="block text-sm text-slate-400">Full Name</label>
+                    {{ profile_form.name(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', id='profile-name') }}
+                    {% for error in profile_form.name.errors %}
+                        <p class="text-xs text-rose-400 mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div>
+                    <label for="profile-timezone" class="block text-sm text-slate-400">Timezone</label>
+                    {{ profile_form.timezone(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', id='profile-timezone') }}
+                </div>
+                <div>
+                    <label for="profile-telegram" class="block text-sm text-slate-400">Telegram Chat ID (optional)</label>
+                    {{ profile_form.telegram_chat_id(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', id='profile-telegram', placeholder='123456789') }}
+                </div>
+                <div class="flex justify-end">
+                    {{ profile_form.submit_profile(class_='inline-flex items-center rounded-xl bg-brand hover:bg-brand-dark px-4 py-2 text-sm font-semibold transition') }}
+                </div>
+            </form>
+        </div>
+
+        <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-6" id="notifications">
+            <h2 class="text-lg font-semibold">Notification Channels</h2>
+            <p class="text-sm text-slate-400 mt-1">Add destinations for downtime alerts.</p>
+            <form method="post" class="mt-6 space-y-4">
+                {{ notification_form.csrf_token }}
+                <div>
+                    <label for="notification-channel" class="block text-sm text-slate-400">Channel</label>
+                    {{ notification_form.channel(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', id='notification-channel') }}
+                </div>
+                <div>
+                    <label for="notification-destination" class="block text-sm text-slate-400">Destination</label>
+                    {{ notification_form.destination(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', id='notification-destination', placeholder='you@company.com or @username') }}
+                    {% for error in notification_form.destination.errors %}
+                        <p class="text-xs text-rose-400 mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="flex items-center space-x-2">
+                    {{ notification_form.is_enabled(class_='rounded border-slate-700 bg-slate-900 text-brand focus:ring-brand', id='notification-enabled') }}
+                    <label for="notification-enabled" class="text-sm text-slate-300">Enable notifications</label>
+                </div>
+                <div class="flex justify-end">
+                    {{ notification_form.submit_notification(class_='inline-flex items-center rounded-xl bg-brand hover:bg-brand-dark px-4 py-2 text-sm font-semibold transition') }}
+                </div>
+            </form>
+
+            {% if notifications %}
+                <div class="mt-6 space-y-3">
+                    {% for pref in notifications %}
+                        <div class="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm">
+                            <div>
+                                <p class="font-medium text-slate-200">{{ pref.channel|title }} → {{ pref.destination }}</p>
+                                <p class="text-xs text-slate-500">{{ 'Enabled' if pref.is_enabled else 'Disabled' }}</p>
+                            </div>
+                            <form method="post" action="{{ url_for('settings.delete_notification', pref_id=pref.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-sm text-rose-400 hover:text-rose-300">Remove</button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="mt-6 text-xs text-slate-500">No notification channels configured yet.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="grid gap-6 lg:grid-cols-2" id="api">
+        <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-6">
+            <h2 class="text-lg font-semibold">API Keys</h2>
+            <p class="text-sm text-slate-400 mt-1">Generate keys for integrations and automations.</p>
+            <form method="post" class="mt-6 space-y-4">
+                {{ api_key_form.csrf_token }}
+                <div>
+                    <label for="api-key-name" class="block text-sm text-slate-400">Key Name</label>
+                    {{ api_key_form.name(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', id='api-key-name', placeholder='PagerDuty sync') }}
+                    {% for error in api_key_form.name.errors %}
+                        <p class="text-xs text-rose-400 mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="flex justify-end">
+                    {{ api_key_form.submit_api_key(class_='inline-flex items-center rounded-xl bg-brand hover:bg-brand-dark px-4 py-2 text-sm font-semibold transition') }}
+                </div>
+            </form>
+
+            {% if api_keys %}
+                <div class="mt-6 space-y-3">
+                    {% for key in api_keys %}
+                        <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="font-medium text-slate-200">{{ key.name }}</p>
+                                    <p class="mt-1 text-xs font-mono text-slate-500">{{ key.key }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">Created {{ key.created_at.strftime('%Y-%m-%d %H:%M %Z') if key.created_at else '—' }}</p>
+                                </div>
+                                <form method="post" action="{{ url_for('settings.delete_api_key', key_id=key.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="text-xs text-rose-400 hover:text-rose-300">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="mt-6 text-xs text-slate-500">No API keys created yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-6" id="status-pages">
+            <h2 class="text-lg font-semibold">Public Status Pages</h2>
+            <p class="text-sm text-slate-400 mt-1">Create shareable pages for your stakeholders.</p>
+            <form method="post" class="mt-6 space-y-4">
+                {{ status_page_form.csrf_token }}
+                <div>
+                    <label for="status-name" class="block text-sm text-slate-400">Status Page Name</label>
+                    {{ status_page_form.name(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', id='status-name', placeholder='Core Services') }}
+                    {% for error in status_page_form.name.errors %}
+                        <p class="text-xs text-rose-400 mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div>
+                    <label for="status-slug" class="block text-sm text-slate-400">Slug</label>
+                    {{ status_page_form.slug(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', id='status-slug', placeholder='company-status') }}
+                    {% for error in status_page_form.slug.errors %}
+                        <p class="text-xs text-rose-400 mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div>
+                    <label for="status-description" class="block text-sm text-slate-400">Description</label>
+                    {{ status_page_form.description(class_='mt-1 block w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', id='status-description', placeholder='Availability for our production APIs') }}
+                </div>
+                <div>
+                    <label for="status-monitors" class="block text-sm text-slate-400">Monitors</label>
+                    {{ status_page_form.monitors(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand h-32', id='status-monitors', multiple=True) }}
+                    {% for error in status_page_form.monitors.errors %}
+                        <p class="text-xs text-rose-400 mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="flex items-center space-x-2">
+                    {{ status_page_form.is_public(class_='rounded border-slate-700 bg-slate-900 text-brand focus:ring-brand', id='status-is-public') }}
+                    <label for="status-is-public" class="text-sm text-slate-300">Make publicly accessible</label>
+                </div>
+                <div class="flex justify-end">
+                    {{ status_page_form.submit_status_page(class_='inline-flex items-center rounded-xl bg-brand hover:bg-brand-dark px-4 py-2 text-sm font-semibold transition') }}
+                </div>
+            </form>
+
+            {% if status_pages %}
+                <div class="mt-6 space-y-3">
+                    {% for page in status_pages %}
+                        <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 text-sm">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="text-slate-200 font-medium">{{ page.name }}</p>
+                                    <p class="text-xs text-slate-500">{{ url_for('public.status_page', slug=page.slug, _external=True) }}</p>
+                                    <p class="text-xs text-slate-500 mt-1">{{ page.description or 'No description' }}</p>
+                                </div>
+                                <div class="space-y-2 text-right">
+                                    <form method="post" action="{{ url_for('settings.toggle_status_page', page_id=page.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="text-xs text-slate-300 hover:text-brand">
+                                            {{ 'Make Private' if page.is_public else 'Make Public' }}
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{{ url_for('settings.delete_status_page', page_id=page.id) }}" onsubmit="return confirm('Delete status page {{ page.name }}?')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="text-xs text-rose-400 hover:text-rose-300">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="mt-6 text-xs text-slate-500">No status pages created yet.</p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Create Account · PulseWatch{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto px-6">
+    <div class="mt-16 rounded-3xl border border-slate-800 bg-slate-900/70 p-8 shadow-xl">
+        <h1 class="text-2xl font-semibold text-center mb-6">Create your PulseWatch account</h1>
+        <form method="post" novalidate class="space-y-4">
+            {{ form.hidden_tag() }}
+            <div>
+                <label class="block text-sm text-slate-400">Full Name</label>
+                {{ form.name(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', placeholder='Ada Lovelace') }}
+                {% for error in form.name.errors %}
+                    <p class="text-xs text-rose-400 mt-1">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div>
+                <label class="block text-sm text-slate-400">Email</label>
+                {{ form.email(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', placeholder='you@company.com') }}
+                {% for error in form.email.errors %}
+                    <p class="text-xs text-rose-400 mt-1">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div>
+                <label class="block text-sm text-slate-400">Password</label>
+                {{ form.password(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', placeholder='••••••••') }}
+                {% for error in form.password.errors %}
+                    <p class="text-xs text-rose-400 mt-1">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div>
+                <label class="block text-sm text-slate-400">Confirm Password</label>
+                {{ form.confirm_password(class_='mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', placeholder='••••••••') }}
+                {% for error in form.confirm_password.errors %}
+                    <p class="text-xs text-rose-400 mt-1">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <button type="submit" class="w-full inline-flex items-center justify-center rounded-xl bg-brand hover:bg-brand-dark px-4 py-3 font-semibold transition">Create Account</button>
+        </form>
+        <p class="mt-6 text-sm text-center text-slate-400">
+            Already have an account? <a href="{{ url_for('auth.login') }}" class="text-brand hover:text-brand-dark">Sign in</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

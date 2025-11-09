@@ -1,0 +1,143 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Dashboard · PulseWatch{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 lg:px-8 space-y-10">
+    {% set display_name = (current_user.name or current_user.email).strip() %}
+    <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-8">
+        <div class="space-y-3">
+            <div class="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-brand/90">
+                <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand/20 text-brand">⚡</span>
+                Live Reliability Overview
+            </div>
+            <h1 class="text-4xl font-semibold leading-tight text-white sm:text-5xl">Welcome back, {{ display_name }}</h1>
+            <p class="max-w-2xl text-base text-slate-400">Monitor uptime, performance trends, and incidents in real time. Configure alerts so your team catches issues before your users do.</p>
+        </div>
+        <div x-data="{ open: false }" @keyup.escape.window="open = false" class="flex w-full max-w-sm flex-col gap-4 rounded-3xl border border-slate-800/70 bg-slate-900/70 p-6 shadow-xl shadow-brand/10">
+            <div>
+                <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Quick Action</p>
+                <p class="mt-1 text-lg font-semibold text-slate-100">Create new monitor</p>
+            </div>
+            <button @click="open = true"
+                class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-dark">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                New Monitor
+            </button>
+            <template x-if="open">
+                <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80" @click.self="open = false">
+                    <div class="w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900/80 p-8 shadow-xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-lg font-semibold">Create Monitor</h2>
+                            <button class="text-slate-400 hover:text-white" @click="open = false">✕</button>
+                        </div>
+                        <form action="{{ url_for('dashboard.create_monitor') }}" method="post" class="space-y-4">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div>
+                                <label for="modal-monitor-name" class="block text-sm text-slate-400">Name</label>
+                                <input id="modal-monitor-name" type="text" name="name" required class="mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand" placeholder="API Health" />
+                            </div>
+                            <div>
+                                <label for="modal-monitor-url" class="block text-sm text-slate-400">URL</label>
+                                <input id="modal-monitor-url" type="url" name="url" required class="mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand" placeholder="https://api.example.com/health" />
+                            </div>
+                            <div>
+                                <label for="modal-monitor-interval" class="block text-sm text-slate-400">Check Interval (seconds)</label>
+                                <input id="modal-monitor-interval" type="number" name="interval" min="30" step="30" value="60" class="mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand" placeholder="60" />
+                            </div>
+                            <div class="flex justify-end space-x-3 pt-4">
+                                <button type="button" class="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium" @click="open = false">Cancel</button>
+                                <button type="submit" class="rounded-xl bg-brand hover:bg-brand-dark px-4 py-2 text-sm font-semibold">Create Monitor</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    {% if summaries %}
+        <div class="grid gap-8 lg:grid-cols-2">
+            {% for summary in summaries %}
+                <div class="group rounded-3xl border border-slate-800/60 bg-slate-900/70 p-6 shadow-lg shadow-brand/10 transition hover:border-brand/40 hover:shadow-brand/20">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex flex-col gap-1">
+                            <a href="{{ url_for('dashboard.monitor_detail', monitor_id=summary.monitor.id) }}" class="text-lg font-semibold text-slate-100 transition group-hover:text-brand">
+                                {{ summary.monitor.name }}
+                            </a>
+                            <p class="mt-1 text-xs text-slate-400 truncate">{{ summary.monitor.url }}</p>
+                        </div>
+                        <span class="inline-flex items-center space-x-2 rounded-full px-3 py-1 text-xs font-medium bg-emerald-500/10 border border-emerald-500/40 text-emerald-300">
+                            <span class="h-2 w-2 rounded-full {% if summary.monitor.last_is_up %}bg-emerald-400 animate-pulse{% else %}bg-rose-400{% endif %}"></span>
+                            <span>{{ 'Up' if summary.monitor.last_is_up else 'Down' if summary.monitor.last_is_up is not none else 'New' }}</span>
+                        </span>
+                    </div>
+                    <div class="mt-6 grid grid-cols-3 gap-4 text-center">
+                        <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                            <p class="text-xs text-slate-400">Uptime</p>
+                            <p class="mt-2 text-lg font-semibold">{{ summary.uptime_pct if summary.uptime_pct is not none else '—' }}{% if summary.uptime_pct is not none %}%{% endif %}</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                            <p class="text-xs text-slate-400">Avg Response</p>
+                            <p class="mt-2 text-lg font-semibold">{{ summary.avg_response|default('—', true)|round(0) if summary.avg_response else '—' }}{% if summary.avg_response %} ms{% endif %}</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                            <p class="text-xs text-slate-400">Downtime events</p>
+                            <p class="mt-2 text-lg font-semibold">{{ summary.downtime_events }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <canvas class="h-32" data-chart="response"
+                            data-label="Response Time (ms)"
+                            data-response='{{ summary.response_chart|tojson }}'
+                            data-monitor-id="{{ summary.monitor.id }}"></canvas>
+                    </div>
+                    <div class="mt-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
+                        <span class="inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/60 px-3 py-1">
+                            <svg class="h-3.5 w-3.5 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            {{ summary.monitor.interval_seconds }}s interval
+                        </span>
+                        <span class="inline-flex items-center gap-2">
+                            <svg class="h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2" /></svg>
+                            Last check: {{ summary.monitor.last_check_at|default('—') }}
+                        </span>
+                    </div>
+                    <div class="mt-6 flex items-center justify-between gap-3">
+                        <form action="{{ url_for('dashboard.toggle_monitor', monitor_id=summary.monitor.id) }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-brand/40 px-3 py-2 text-xs font-semibold text-brand transition hover:border-brand hover:text-brand-dark">
+                                <span>{{ 'Resume monitor' if summary.monitor.is_paused else 'Pause monitor' }}</span>
+                            </button>
+                        </form>
+                        <form action="{{ url_for('dashboard.delete_monitor', monitor_id=summary.monitor.id) }}" method="post" onsubmit="return confirm('Delete monitor {{ summary.monitor.name }}?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-rose-400/50 px-3 py-2 text-xs font-semibold text-rose-300 transition hover:border-rose-300 hover:text-rose-200">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-8 text-center">
+            <h2 class="text-xl font-semibold">Create your first monitor</h2>
+            <p class="mt-2 text-sm text-slate-400">Add a URL to start tracking uptime and performance metrics.</p>
+            <form action="{{ url_for('dashboard.create_monitor') }}" method="post" class="mt-6 max-w-lg mx-auto space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div>
+                    <label for="empty-monitor-name" class="block text-sm text-slate-400">Name</label>
+                    <input id="empty-monitor-name" type="text" name="name" required class="mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand" placeholder="API Health" />
+                </div>
+                <div>
+                    <label for="empty-monitor-url" class="block text-sm text-slate-400">URL</label>
+                    <input id="empty-monitor-url" type="url" name="url" required class="mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand" placeholder="https://example.com/health" />
+                </div>
+                <div>
+                    <label for="empty-monitor-interval" class="block text-sm text-slate-400">Check Interval (seconds)</label>
+                    <input id="empty-monitor-interval" type="number" name="interval" min="30" step="30" value="60" class="mt-1 block w-full rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand" placeholder="60" />
+                </div>
+                <button type="submit" class="w-full inline-flex items-center justify-center rounded-xl bg-brand hover:bg-brand-dark px-4 py-3 font-semibold transition">Create Monitor</button>
+            </form>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

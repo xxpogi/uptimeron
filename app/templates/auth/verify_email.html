@@ -1,0 +1,31 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Verify Email · PulseWatch{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto px-6">
+    <div class="mt-20 rounded-3xl border border-slate-800 bg-slate-900/75 p-8 shadow-xl shadow-brand/10">
+        <div class="flex flex-col items-center text-center space-y-3">
+            <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/15 text-brand">🔐</span>
+            <h1 class="text-2xl font-semibold">Check your inbox</h1>
+            <p class="text-sm text-slate-400">We sent a 6-digit verification code to <span class="font-medium text-slate-200">{{ email }}</span>. Enter it below to activate your account.</p>
+        </div>
+        <form method="post" novalidate class="mt-8 space-y-4">
+            {{ form.hidden_tag() }}
+            <div>
+                <label class="block text-xs uppercase tracking-[0.3em] text-slate-400">Verification code</label>
+                {{ form.code(class_='mt-2 block w-full text-center text-2xl tracking-[0.6em] rounded-2xl border border-slate-800 bg-slate-950/80 px-6 py-4 font-semibold text-slate-100 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand', placeholder='000000', autocomplete='one-time-code') }}
+                {% for error in form.code.errors %}
+                    <p class="text-xs text-rose-400 mt-2">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <button type="submit" class="w-full inline-flex items-center justify-center rounded-xl bg-brand hover:bg-brand-dark px-4 py-3 font-semibold transition">Verify email</button>
+        </form>
+        <form action="{{ url_for('auth.resend_verification_email') }}" method="post" class="mt-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <p class="text-xs text-slate-500">Didn't get the code? <button type="submit" class="text-brand hover:text-brand-dark font-medium">Resend email</button></p>
+        </form>
+        <p class="mt-6 text-xs text-slate-500">Trouble signing up? <a href="{{ url_for('auth.register') }}" class="text-brand hover:text-brand-dark">Start over</a></p>
+    </div>
+</div>
+{% endblock %}

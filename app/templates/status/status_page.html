@@ -1,0 +1,67 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}{{ page.name }} Status · PulseWatch{% endblock %}
+
+{% block content %}
+{% set total_monitors = monitors|length %}
+{% set up_monitors = monitors|selectattr('last_is_up')|list|length %}
+{% set all_operational = total_monitors > 0 and up_monitors == total_monitors %}
+{% set any_incident = total_monitors > 0 and not all_operational %}
+
+<div class="max-w-5xl mx-auto px-6 lg:px-8 space-y-12">
+    <header class="text-center space-y-3">
+        <h1 class="text-3xl font-semibold">{{ page.name }}</h1>
+        <p class="text-sm text-slate-400">{{ page.description or 'Service availability overview' }}</p>
+        <div class="flex items-center justify-center space-x-3 text-sm text-slate-400">
+            {% if total_monitors == 0 %}
+                <span class="inline-flex items-center space-x-2 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-slate-300">
+                    <span class="h-2 w-2 rounded-full bg-slate-500"></span>
+                    <span>No monitors added yet</span>
+                </span>
+            {% else %}
+                <span class="inline-flex items-center space-x-2 rounded-full px-3 py-1 text-emerald-200 border {% if any_incident %}border-rose-500/40 bg-rose-500/10 text-rose-200{% else %}border-emerald-500/40 bg-emerald-500/10 text-emerald-200{% endif %}">
+                    <span class="h-2 w-2 rounded-full {% if any_incident %}bg-rose-400{% else %}bg-emerald-400 animate-pulse{% endif %}"></span>
+                    <span>{{ 'Incident detected' if any_incident else 'All systems operational' }}</span>
+                </span>
+            {% endif %}
+        </div>
+    </header>
+
+    {% if monitors %}
+        <section class="space-y-6">
+            {% for monitor in monitors %}
+                <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-lg shadow-brand/5">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold">{{ monitor.name }}</h2>
+                            <p class="text-xs text-slate-500 break-all">{{ monitor.url }}</p>
+                        </div>
+                        <span class="inline-flex items-center space-x-2 rounded-full px-3 py-1 text-xs font-medium {% if monitor.last_is_up %}bg-emerald-500/10 border border-emerald-500/40 text-emerald-200{% else %}bg-rose-500/10 border border-rose-500/40 text-rose-200{% endif %}">
+                            <span class="h-2 w-2 rounded-full {% if monitor.last_is_up %}bg-emerald-400 animate-pulse{% else %}bg-rose-400{% endif %}"></span>
+                            <span>{{ 'Operational' if monitor.last_is_up else 'Outage' }}</span>
+                        </span>
+                    </div>
+                    <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                        <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                            <p class="text-xs text-slate-400">Last check</p>
+                            <p class="mt-2 text-lg font-semibold">{{ monitor.last_check_at or '—' }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                            <p class="text-xs text-slate-400">Status code</p>
+                            <p class="mt-2 text-lg font-semibold">{{ monitor.last_status_code or '—' }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                            <p class="text-xs text-slate-400">Latency</p>
+                            <p class="mt-2 text-lg font-semibold">{{ monitor.last_response_time_ms|round(2) if monitor.last_response_time_ms else '—' }}{% if monitor.last_response_time_ms %} ms{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </section>
+    {% else %}
+        <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-12 text-center">
+            <p class="text-sm text-slate-400">No monitors have been published on this status page yet.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

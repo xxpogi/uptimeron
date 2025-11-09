@@ -1,0 +1,87 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}{{ monitor.name }} · PulseWatch{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 lg:px-8 space-y-10">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-semibold">{{ monitor.name }}</h1>
+            <p class="mt-2 text-sm text-slate-400">{{ monitor.url }}</p>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span class="inline-flex items-center space-x-2 rounded-full px-3 py-1 text-xs font-medium {% if monitor.last_is_up %}bg-emerald-500/10 border border-emerald-500/40 text-emerald-300{% else %}bg-rose-500/10 border border-rose-500/40 text-rose-300{% endif %}">
+                <span class="h-2 w-2 rounded-full {% if monitor.last_is_up %}bg-emerald-400 animate-pulse{% else %}bg-rose-400{% endif %}"></span>
+                <span>{{ 'Up' if monitor.last_is_up else 'Down' if monitor.last_is_up is not none else 'No data yet' }}</span>
+            </span>
+            <form action="{{ url_for('dashboard.toggle_monitor', monitor_id=monitor.id) }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium hover:border-brand hover:text-brand">
+                    {{ 'Resume monitor' if monitor.is_paused else 'Pause monitor' }}
+                </button>
+            </form>
+            <form action="{{ url_for('dashboard.delete_monitor', monitor_id=monitor.id) }}" method="post" onsubmit="return confirm('Delete monitor {{ monitor.name }}?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="rounded-xl border border-rose-500/40 text-rose-300 px-4 py-2 text-sm font-medium hover:border-rose-400">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-3">
+        <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-6">
+            <p class="text-xs text-slate-400">Average response</p>
+            <p class="mt-3 text-3xl font-semibold">{{ avg_response|round(1) if avg_response else '—' }}{% if avg_response %} ms{% endif %}</p>
+        </div>
+        <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-6">
+            <p class="text-xs text-slate-400">Last status</p>
+            <p class="mt-3 text-3xl font-semibold">{{ monitor.last_status_code or '—' }}</p>
+        </div>
+        <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-6">
+            <p class="text-xs text-slate-400">Uptime (last {{ checks|length }} checks)</p>
+            <p class="mt-3 text-3xl font-semibold">{{ uptime_pct if uptime_pct is not none else '—' }}{% if uptime_pct is not none %}%{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-6">
+        <h2 class="text-lg font-semibold">Response time</h2>
+        <canvas class="mt-6 h-64" data-chart="response" data-label="Response Time (ms)" data-response='{{ response_chart|tojson }}' data-monitor-id="{{ monitor.id }}"></canvas>
+    </div>
+
+    <div class="rounded-3xl border border-slate-800 bg-slate-900/70 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Recent checks</h2>
+            <span class="text-xs text-slate-500">Showing {{ checks|length }} entries</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-800 text-sm">
+                <thead class="text-xs uppercase tracking-wide text-slate-400">
+                    <tr>
+                        <th class="px-4 py-3 text-left">Checked at</th>
+                        <th class="px-4 py-3 text-left">Status</th>
+                        <th class="px-4 py-3 text-left">Response</th>
+                        <th class="px-4 py-3 text-left">Latency</th>
+                        <th class="px-4 py-3 text-left">Message</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for check in checks %}
+                        <tr class="hover:bg-slate-900/80">
+                            <td class="px-4 py-3 text-slate-300">{{ check.checked_at }}</td>
+                            <td class="px-4 py-3">
+                                {% if check.is_up %}
+                                    <span class="inline-flex items-center rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 text-xs font-medium text-emerald-300">Up</span>
+                                {% else %}
+                                    <span class="inline-flex items-center rounded-lg bg-rose-500/10 border border-rose-500/30 px-2 py-1 text-xs font-medium text-rose-300">Down</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-slate-300">{{ check.status_code or '—' }}</td>
+                            <td class="px-4 py-3 text-slate-300">{{ check.response_time_ms|round(2) if check.response_time_ms else '—' }} ms</td>
+                            <td class="px-4 py-3 text-slate-400">{{ check.message or '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
