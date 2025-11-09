@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import logging
+import os
+import re
+import subprocess
 from datetime import datetime, timezone
 from typing import Optional
+from urllib.parse import urlparse
 
-import requests
 from apscheduler.jobstores.base import JobLookupError
 from flask import current_app
 
@@ -68,21 +71,34 @@ def run_monitor_check(monitor_id: int) -> None:
         is_up = False
         message = ""
 
-        try:
-            response = requests.get(
-                monitor.url,
-                timeout=monitor.timeout_seconds,
-                allow_redirects=True,
-            )
-            response_time_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
-            status_code = response.status_code
-            is_up = response.ok
-            if not is_up:
-                message = f"Status {status_code}"
-        except requests.exceptions.RequestException as exc:  # pragma: no cover - network errors
-            response_time_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
-            message = str(exc)
-            logger.exception("Monitor %s check failed: %s", monitor.id, exc)
+        host = _resolve_host(monitor.url)
+        if not host:
+            message = "Unable to resolve host"
+            logger.warning("Monitor %s has invalid host from url %s", monitor.id, monitor.url)
+        else:
+            ping_cmd = _build_ping_command(host, monitor.timeout_seconds)
+            try:
+                completed = subprocess.run(
+                    ping_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=max(monitor.timeout_seconds, 1) + 2,
+                    check=False,
+                )
+                elapsed_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                response_time_ms = _extract_latency_ms(completed.stdout) or elapsed_ms
+                is_up = completed.returncode == 0
+                status_code = 0 if is_up else -1
+                if not is_up:
+                    message = completed.stderr.strip() or completed.stdout.strip() or "Ping failed"
+            except subprocess.TimeoutExpired:
+                response_time_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                message = "Ping timed out"
+            except OSError as exc:
+                response_time_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                message = str(exc)
+                logger.exception("Monitor %s ping failed: %s", monitor.id, exc)
 
         check = MonitorCheck(
             monitor_id=monitor.id,
@@ -109,3 +125,28 @@ def run_monitor_check(monitor_id: int) -> None:
             notify_downtime(monitor, message)
         elif not previous_state and is_up:
             notify_recovery(monitor)
+
+
+def _resolve_host(target: str) -> str | None:
+    parsed = urlparse(target)
+    if parsed.scheme:
+        return parsed.hostname
+    parsed = urlparse(f"//{target}")
+    return parsed.hostname or (parsed.path.split("/")[0] if parsed.path else None)
+
+
+def _build_ping_command(host: str, timeout_seconds: int) -> list[str]:
+    timeout_seconds = max(timeout_seconds, 1)
+    if os.name == "nt":
+        return ["ping", "-n", "1", "-w", str(timeout_seconds * 1000), host]
+    return ["ping", "-c", "1", "-W", str(timeout_seconds), host]
+
+
+def _extract_latency_ms(output: str) -> Optional[float]:
+    match = re.search(r"time[=<]([0-9.]+)\s*ms", output)
+    if match:
+        try:
+            return float(match.group(1))
+        except ValueError:  # pragma: no cover - defensive
+            return None
+    return None
