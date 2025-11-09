@@ -1,3 +1,4 @@
+import os
 from flask import current_app, url_for
 from flask_mail import Message
 
@@ -5,9 +6,26 @@ from app.extensions import mail
 
 
 def send_email(subject: str, recipients: list[str], html_body: str) -> None:
-    msg = Message(subject=subject, recipients=recipients)
-    msg.html = html_body
-    mail.send(msg)
+    # Check if using Resend API (free email service)
+    resend_api_key = os.environ.get("RESEND_API_KEY")
+    
+    if resend_api_key:
+        # Use Resend (free, no SMTP needed)
+        import resend
+        resend.api_key = resend_api_key
+        
+        params = {
+            "from": os.environ.get("MAIL_DEFAULT_SENDER", "PulseWatch <onboarding@resend.dev>"),
+            "to": recipients,
+            "subject": subject,
+            "html": html_body,
+        }
+        resend.Emails.send(params)
+    else:
+        # Fall back to Flask-Mail (SMTP)
+        msg = Message(subject=subject, recipients=recipients)
+        msg.html = html_body
+        mail.send(msg)
 
 
 def send_reset_email(user) -> None:
