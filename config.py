@@ -4,7 +4,14 @@ from datetime import timedelta
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "change-this-secret")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///pulsewatch.db")
+    
+    # Convert postgres:// to postgresql+psycopg:// for psycopg3 compatibility
+    _db_url = os.environ.get("DATABASE_URL", "sqlite:///pulsewatch.db")
+    if _db_url.startswith("postgres://"):
+        _db_url = _db_url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif _db_url.startswith("postgresql://"):
+        _db_url = _db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
@@ -20,10 +27,11 @@ class Config:
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "PulseWatch <noreply@pulsewatch.io>")
     RATELIMIT_DEFAULT = "100 per hour"
     RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
+    # Use the same converted database URL for APScheduler
     APSCHEDULER_JOBSTORES = {
         "default": {
             "type": "sqlalchemy",
-            "url": os.environ.get("DATABASE_URL", "sqlite:///pulsewatch.db"),
+            "url": _db_url,
         }
     }
     APSCHEDULER_EXECUTORS = {
